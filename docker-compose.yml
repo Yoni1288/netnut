@@ -1,0 +1,67 @@
+version: '2'
+
+services:
+    mysql:
+        container_name: db
+        image: mysql:5.7
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: MYSQL_ROOT_PASSWORD
+            MYSQL_DATABASE: MYSQL_DATABASE
+            MYSQL_USER: MYSQL_USER
+            MYSQL_PASSWORD: MYSQL_PASSWORD
+        volumes:
+            - ./mysql:/var/lib/mysql
+        networks:
+            - code-network
+
+    nginx:
+        image: nginx:latest
+        ports:
+            - "8080:80"
+        volumes:
+            - ./api:/api
+            - ./site.conf:/etc/nginx/conf.d/default.conf
+        networks:
+            - code-network
+    php:
+        image: php:fpm
+        command:
+            - /bin/sh
+            - -c
+            - |
+                docker-php-ext-install mysqli 
+                echo "extension installed.....starting php-fpm........................................"
+                php-fpm
+        volumes:
+            - ./api:/api
+        
+        networks:
+            - code-network
+    react:
+        build:
+            context: ./app/
+        command: npm start
+        volumes:
+            - ./app/:/usr/app
+            - /usr/app/node_modules
+        ports:
+            - "3000:3000"
+    node:
+        container_name: node
+        build:
+            dockerfile: Dockerfile
+            context: "./node"
+        depends_on:
+            - mysql
+        volumes:
+            - /app/node_modules
+            - ./node:/app
+        ports:
+            - "4000:4000"
+        networks:
+            - code-network
+    
+networks:
+    code-network:
+        driver: bridge
